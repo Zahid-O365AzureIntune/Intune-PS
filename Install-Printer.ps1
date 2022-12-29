@@ -187,7 +187,36 @@ If (-not $ThrowBad) {
     }
 }
 
+
 If ($ThrowBad) {
     Write-Error "An error was thrown during installation. Installation failed. Refer to the log file in %temp% for details"
     Write-LogEntry -Stamp -Value "Installation Failed"
 }
+
+Write-LogEntry -Value "##################################"
+Write-LogEntry -Stamp -Value "Editing registry to disable 'Windows Manage Default Printer' and set Default printer"
+Write-LogEntry -Value "##################################"
+Write-LogEntry -Value "Disabling 'Windows Manage Default Printer'..."
+
+# Set variables to indicate value and key to set
+$RegistryPath = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Windows'#'HKCU:\Software\CommunityBlog\Scripts'
+$Name         = 'LegacyDefaultPrinterMode'
+$Value        = '1'
+# Create the key if it does not exist
+If (-NOT (Test-Path $RegistryPath)) {
+    Write-LogEntry -Stamp -Value "Registry ""$($Name)"" does not exist. Adding the registry..."
+  New-Item -Path $RegistryPath -Force | Out-Null
+}
+else {
+        Write-LogEntry -Stamp -Value "Registry ""$($Name)"" already exists. Modifying the registry..."
+     }
+
+# Now set the value
+New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -Force 
+
+Write-LogEntry -Value "Setting the Default printer..."
+
+#Set Default Printer
+$P = Get-CimInstance -Class Win32_Printer -Filter "Name='Canon imageRUNNER C3020'"
+Invoke-CimMethod -InputObject $P -MethodName SetDefaultPrinter
+
